@@ -3,56 +3,58 @@ import numpy as np
 import skfuzzy as fuzz
 from skfuzzy import control as ctrl
 
-food = ctrl.Antecedent(np.arange(0, 11, 1), 'Ужин')
-service = ctrl.Antecedent(np.arange(0, 11, 1), 'Обслуживание')
+attendance = ctrl.Antecedent(np.arange(0, 17, 1), 'Посещаемость')
+performance = ctrl.Antecedent(np.arange(0, 9, 1), 'Результативность')
+assessment = ctrl.Consequent(np.arange(2, 6, 1), 'Оценка')
 
-tip = ctrl.Consequent(np.arange(0, 31, 1), 'Чаевые')
+attendance['Хорошая'] = fuzz.trapmf(attendance.universe, [12, 16, 16, 16])
+attendance['Плохая'] = fuzz.trapmf(attendance.universe, [0, 0, 1, 4])
 
-food['подгоревший'] = fuzz.trapmf(food.universe, [0, 0, 1, 3])
-food['превосходный'] = fuzz.trapmf(food.universe, [7, 9, 10, 10])
+# Задать нормальные функции принадлежности
+performance['Высокая'] = fuzz.gaussmf(performance.universe, 0, 1.5)
+performance['Средняя'] = fuzz.trapmf(performance.universe, [3, 4, 5, 6])
+performance['Низкая'] = fuzz.gaussmf(performance.universe, 5, 1.5)
 
-service['плохое'] = fuzz.gaussmf(service.universe, 0, 1.5)
-service['хорошее'] = fuzz.gaussmf(service.universe, 5, 1.5)
-service['отличное'] = fuzz.gaussmf(service.universe, 10, 1.5)
+assessment['Отличная'] = fuzz.trimf(assessment.universe, [4, 5, 5])
+assessment['Нормальная'] = fuzz.trimf(assessment.universe, [3, 4, 4])
+assessment['Ужасная'] = fuzz.trimf(assessment.universe, [2, 2, 3])
 
-tip['малые'] = fuzz.trimf(tip.universe, [0, 5, 10])
-tip['средние'] = fuzz.trimf(tip.universe, [10, 15, 20])
-tip['щедрые'] = fuzz.trimf(tip.universe, [20, 25, 30])
+attendance.view()
+performance.view()
+assessment.view()
 
-food.view()
+# assessment['Отличная'].view()
 
-service.view()
+# Нет возможности задавать всес правила
+rule1 = ctrl.Rule(performance['Низкая'] & ~attendance['Хорошая'], assessment['Ужасная'])
+rule2 = ctrl.Rule(performance['Высокая'], assessment['Отличная'])
+rule3 = ctrl.Rule(performance['Средняя'] | attendance['Хорошая'], assessment['Нормальная'])
 
-tip['щедрые'].view()
+control_system = ctrl.ControlSystem([rule1, rule2, rule3])
 
-rule1 = ctrl.Rule(service['плохое'] | food['подгоревший'], tip['малые'])
-rule2 = ctrl.Rule(service['хорошее'], tip['средние'])
-rule3 = ctrl.Rule(service['отличное'] | food['превосходный'], tip['щедрые'])
+control_system_simulation = ctrl.ControlSystemSimulation(control_system)
 
-tipping_ctrl = ctrl.ControlSystem([rule1, rule2, rule3])
+control_system_simulation.input['Посещаемость'] = 16 # Сколько пар посетил студент
+control_system_simulation.input['Результативность'] = 8 # Сколько лаб сдал студент
 
-tipping = ctrl.ControlSystemSimulation(tipping_ctrl)
+control_system_simulation.compute()
 
-tipping.input['Ужин'] = 2.45
-tipping.input['Обслуживание'] = 6.9
+print(control_system_simulation.output['Оценка'])
 
-tipping.compute()
+assessment.view(sim=control_system_simulation)
 
-print(tipping.output['Чаевые'])
+unsampled1 = np.arange(0, 9, 1)
+unsampled2 = np.arange(0, 17, 1)
 
-tip.view(sim=tipping)
-
-unsampled = np.arange(0, 11, 1)
-
-x, y = np.meshgrid(unsampled, unsampled)
+x, y = np.meshgrid(unsampled1, unsampled2)
 
 z = np.zeros_like(x)
-for i in range(11):
-    for j in range(11):
-        tipping.input['Ужин'] = x[i, j]
-        tipping.input['Обслуживание'] = y[i, j]
-        tipping.compute()
-        z[i, j] = tipping.output['Чаевые']
+for i in range(17):
+    for j in range(9):
+        control_system_simulation.input['Посещаемость'] = x[i, j]
+        control_system_simulation.input['Результативность'] = y[i, j]
+        control_system_simulation.compute()
+        z[i, j] = control_system_simulation.output['Оценка']
 
 fig = plt.figure(figsize=(8, 8))
 ax = fig.add_subplot(111, projection='3d')

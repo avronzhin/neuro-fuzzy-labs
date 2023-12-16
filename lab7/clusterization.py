@@ -6,8 +6,7 @@ import numpy as np
 # q - количество атрибутов
 # c - количество кластеров
 # m - значение фазификации
-def fcm(raw_data, q, c, m, n_max, eps):
-    data = normalize(raw_data, q)
+def fcm(data, q, c, m, n_max, eps):
     v_list = []
     for j in range(c):
         v_list.append(data[j])

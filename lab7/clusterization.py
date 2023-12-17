@@ -101,6 +101,27 @@ def d(z, v, q):
     return math.sqrt(acc)
 
 
+def clusters_sil(data, q, cluster_relation, cluster_count):
+    all_sil = []
+    sil_assessment = []
+    for j in range(cluster_count):
+        all_sil.append([])
+        sil_assessment.append([])
+    for i in range(len(data)):
+        obj_sil = sil(data, i, q, cluster_relation, cluster_count)
+        obj_cluster = cluster_relation[i]
+        all_sil[obj_cluster].append(obj_sil)
+    for j in range(cluster_count):
+        cluster_j_sil = all_sil[j]
+        all_sil[j] = sorted(cluster_j_sil, reverse=True)
+        if len(cluster_j_sil) == 0:
+            sil_assessment[j] = 0
+        else:
+            sil_assessment[j] = sum(cluster_j_sil) / len(cluster_j_sil)
+    total_assessment = sum(sil_assessment) / len(sil_assessment)
+    return all_sil, sil_assessment, total_assessment
+
+
 def sil(data, i, q, cluster_relation, c):
     a_i = a(data, i, q, cluster_relation)
     b_i = b(data, i, q, cluster_relation, c)
